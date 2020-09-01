@@ -185,6 +185,8 @@ int RTIMUMPU9250::IMUInit()
     setAccelLpf(m_settings->m_MPU9250AccelLpf);
     setGyroFsr(m_settings->m_MPU9250GyroFsr);
 
+    _useSPI = !m_settings->m_i2c_comm;
+    
     if (_useSPI) // using SPI for communication
     {
         // use low speed SPI for register setting
@@ -198,6 +200,9 @@ int RTIMUMPU9250::IMUInit()
     }
     else // using I2C for communication
     {
+      _i2c = &Wire;
+      _address = m_settings->m_I2CSlaveAddress;
+
         // starting the I2C bus
         _i2c->begin();
         // setting the I2C clock
@@ -699,7 +704,7 @@ bool RTIMUMPU9250::IMURead()
     unsigned char fifoData[12];
     unsigned char compassData[8];
 
-    if (!!readRegisters( MPU9250_FIFO_COUNT_H, 2, fifoCount))
+    if (!readRegisters( MPU9250_FIFO_COUNT_H, 2, fifoCount))
          return false;
 
     count = ((unsigned int)fifoCount[0] << 8) + fifoCount[1];
@@ -713,7 +718,7 @@ bool RTIMUMPU9250::IMURead()
     if (count > MPU9250_FIFO_CHUNK_SIZE * 40) {
         // more than 40 samples behind - going too slowly so discard some samples but maintain timestamp correctly
         while (count >= MPU9250_FIFO_CHUNK_SIZE * 10) {
-            if (!!readRegisters( MPU9250_FIFO_R_W, MPU9250_FIFO_CHUNK_SIZE, fifoData))
+            if (!readRegisters( MPU9250_FIFO_R_W, MPU9250_FIFO_CHUNK_SIZE, fifoData))
                 return false;
             count -= MPU9250_FIFO_CHUNK_SIZE;
             m_timestamp += m_sampleInterval;
@@ -723,10 +728,10 @@ bool RTIMUMPU9250::IMURead()
     if (count < MPU9250_FIFO_CHUNK_SIZE)
       return false;
 
-    if (!!readRegisters( MPU9250_FIFO_R_W, MPU9250_FIFO_CHUNK_SIZE, fifoData))
+    if (!readRegisters( MPU9250_FIFO_R_W, MPU9250_FIFO_CHUNK_SIZE, fifoData))
         return false;
 
-    if (!!readRegisters( MPU9250_EXT_SENS_DATA_00, 8, compassData))
+    if (!readRegisters( MPU9250_EXT_SENS_DATA_00, 8, compassData))
         return false;
 
     RTMath::convertToVector(fifoData, m_accel, m_accelScale, true);

@@ -49,10 +49,16 @@ void setup()
   Serial.begin(SERIAL_PORT_SPEED);
   Serial.println("ArduinoMagCal starting");
   Serial.println("Enter s to save current data to EEPROM");
-  Wire.begin();
    
-  imu = RTIMU::createIMU(&settings);                 // create the imu object
-  imu->IMUInit();
+  imu = RTIMU::createIMU(&settings);
+  int status_ = 0;                 // create the imu object
+  while((status_= imu->IMUInit()) <0){
+    Serial.print("IMU initialization Failed: Error ");
+    Serial.println(status_);
+    while(true){
+      delay(1000);
+    }
+  }
   imu->setCalibrationMode(true);                     // make sure we get raw data
   Serial.print("ArduinoIMU calibrating device "); Serial.println(imu->IMUName());
 }
