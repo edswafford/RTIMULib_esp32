@@ -51,7 +51,7 @@ void setup()
   Serial.println("Enter s to save current data to EEPROM");
    
   imu = RTIMU::createIMU(&settings);
-  int status_ = 0;                 // create the imu object
+  int status_ = 0;                 
   while((status_= imu->IMUInit()) <0){
     Serial.print("IMU initialization Failed: Error ");
     Serial.println(status_);

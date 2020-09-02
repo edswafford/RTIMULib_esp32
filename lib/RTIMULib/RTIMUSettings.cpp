@@ -23,6 +23,10 @@
 
 #include "RTIMUSettings.h"
 
+bool RTIMUSettings::saveSettings(){
+    return false;
+}
+
 #if defined(MPU9150_68) || defined(MPU9150_69)
 #include "RTIMUMPU9150.h"
 #endif

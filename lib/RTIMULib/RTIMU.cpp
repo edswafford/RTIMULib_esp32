@@ -205,6 +205,8 @@ RTIMU::RTIMU(RTIMUSettings *settings)
 
 RTIMU::~RTIMU()
 {
+    delete m_fusion;
+    m_fusion = NULL;
 }
 
 void RTIMU::setCalibrationData()
@@ -307,15 +309,15 @@ void RTIMU::handleGyroBias()
     
     if (!m_gyroBiasValid) {
         RTVector3 deltaAccel = m_previousAccel;
-        deltaAccel -= m_accel;   // compute difference
-        m_previousAccel = m_accel;
+        deltaAccel -= m_imuData.accel;   // compute difference
+        m_previousAccel = m_imuData.accel;
 
         if ((deltaAccel.squareLength() < RTIMU_FUZZY_ACCEL_ZERO_SQUARED) &&
-            (m_gyro.squareLength() < RTIMU_FUZZY_GYRO_ZERO_SQUARED)) {
+            (m_imuData.gyro.squareLength() < RTIMU_FUZZY_GYRO_ZERO_SQUARED)) {
             // what we are seeing on the gyros should be bias only so learn from this
-            m_gyroBias.setX((1.0 - m_gyroAlpha) * m_gyroBias.x() + m_gyroAlpha * m_gyro.x());
-            m_gyroBias.setY((1.0 - m_gyroAlpha) * m_gyroBias.y() + m_gyroAlpha * m_gyro.y());
-            m_gyroBias.setZ((1.0 - m_gyroAlpha) * m_gyroBias.z() + m_gyroAlpha * m_gyro.z());
+            m_settings->m_gyroBias.setX((1.0 - m_gyroAlpha) * m_settings->m_gyroBias.x() + m_gyroAlpha * m_imuData.gyro.x());
+            m_settings->m_gyroBias.setY((1.0 - m_gyroAlpha) * m_settings->m_gyroBias.y() + m_gyroAlpha * m_imuData.gyro.y());
+            m_settings->m_gyroBias.setZ((1.0 - m_gyroAlpha) * m_settings->m_gyroBias.z() + m_gyroAlpha * m_imuData.gyro.z());
 
             if (m_gyroSampleCount < (5 * m_sampleRate)) {
                 m_gyroSampleCount++;
@@ -327,7 +329,7 @@ void RTIMU::handleGyroBias()
         }
     }
 
-    m_gyro -= m_gyroBias;
+    m_imuData.gyro -= m_settings->m_gyroBias;
 }
 
 void RTIMU::calibrateAverageCompass()
@@ -335,18 +337,44 @@ void RTIMU::calibrateAverageCompass()
     //  calibrate if required
 
     if (!m_calibrationMode && m_calibrationValid) {
-        m_compass.setX((m_compass.x() - m_compassCalOffset[0]) * m_compassCalScale[0]);
-        m_compass.setY((m_compass.y() - m_compassCalOffset[1]) * m_compassCalScale[1]);
-        m_compass.setZ((m_compass.z() - m_compassCalOffset[2]) * m_compassCalScale[2]);
+        m_imuData.compass.setX(( m_imuData.compass.x() - m_compassCalOffset[0]) * m_compassCalScale[0]);
+         m_imuData.compass.setY(( m_imuData.compass.y() - m_compassCalOffset[1]) * m_compassCalScale[1]);
+         m_imuData.compass.setZ(( m_imuData.compass.z() - m_compassCalOffset[2]) * m_compassCalScale[2]);
     }
 
     //  update running average
 
-    m_compassAverage.setX(m_compass.x() * COMPASS_ALPHA + m_compassAverage.x() * (1.0 - COMPASS_ALPHA));
-    m_compassAverage.setY(m_compass.y() * COMPASS_ALPHA + m_compassAverage.y() * (1.0 - COMPASS_ALPHA));
-    m_compassAverage.setZ(m_compass.z() * COMPASS_ALPHA + m_compassAverage.z() * (1.0 - COMPASS_ALPHA));
+    m_compassAverage.setX( m_imuData.compass.x() * COMPASS_ALPHA + m_compassAverage.x() * (1.0 - COMPASS_ALPHA));
+    m_compassAverage.setY( m_imuData.compass.y() * COMPASS_ALPHA + m_compassAverage.y() * (1.0 - COMPASS_ALPHA));
+    m_compassAverage.setZ( m_imuData.compass.z() * COMPASS_ALPHA + m_compassAverage.z() * (1.0 - COMPASS_ALPHA));
 
-    m_compass = m_compassAverage;
+     m_imuData.compass = m_compassAverage;
+}
+
+void RTIMU::calibrateAccel()
+{
+    if (!getAccelCalibrationValid())
+        return;
+
+    if (m_imuData.accel.x() >= 0)
+        m_imuData.accel.setX(m_imuData.accel.x() / m_settings->m_accelCalMax.x());
+    else
+        m_imuData.accel.setX(m_imuData.accel.x() / -m_settings->m_accelCalMin.x());
+
+    if (m_imuData.accel.y() >= 0)
+        m_imuData.accel.setY(m_imuData.accel.y() / m_settings->m_accelCalMax.y());
+    else
+        m_imuData.accel.setY(m_imuData.accel.y() / -m_settings->m_accelCalMin.y());
+
+    if (m_imuData.accel.z() >= 0)
+        m_imuData.accel.setZ(m_imuData.accel.z() / m_settings->m_accelCalMax.z());
+    else
+        m_imuData.accel.setZ(m_imuData.accel.z() / -m_settings->m_accelCalMin.z());
+}
+
+void RTIMU::updateFusion()
+{
+    m_fusion->newIMUData(m_imuData, m_settings);
 }
 
 bool RTIMU::IMUGyroBiasValid()

@@ -32,12 +32,38 @@ class RTIMUSettings
 public:
     RTIMUSettings();
 
+    virtual bool saveSettings();
+    
+
     //  These are the local variables
     bool m_i2c_comm;
     int m_imuType;                                          // type code of imu in use
+    int m_fusionType;                                       // fusion algorithm type code
     unsigned char m_I2CSlaveAddress;                        // I2C slave address of the imu
+    int m_axisRotation;                                     // axis rotation code
     int m_pressureType;                                     // type code of pressure sensor in use
     unsigned char m_I2CPressureAddress;                     // I2C slave address of the pressure sensor
+    int m_humidityType;                                     // type code of humidity sensor in use
+    unsigned char m_I2CHumidityAddress;                     // I2C slave address of the humidity sensor
+
+    bool m_compassCalValid;                                 // true if there is valid compass calibration data
+    RTVector3 m_compassCalMin;                              // the minimum values
+    RTVector3 m_compassCalMax;                              // the maximum values
+
+    bool m_compassCalEllipsoidValid;                        // true if the ellipsoid calibration data is valid
+    RTVector3 m_compassCalEllipsoidOffset;                  // the ellipsoid offset
+    float m_compassCalEllipsoidCorr[3][3];                  // the correction matrix
+
+    float m_compassAdjDeclination;                          // magnetic declination adjustment - subtracted from measured
+
+    bool m_accelCalValid;                                   // true if there is valid accel calibration data
+    RTVector3 m_accelCalMin;                                // the minimum values
+    RTVector3 m_accelCalMax;                                // the maximum values
+
+    bool m_gyroBiasValid;                                   // true if the recorded gyro bias is valid
+    RTVector3 m_gyroBias;                                   // the recorded gyro bias
+
+
 
     //  IMU-specific vars
 

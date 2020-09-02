@@ -25,7 +25,10 @@
 #define	_RTIMU_H
 
 #include "RTMath.h"
+#include "RTFusion.h"
 #include "RTIMULibDefs.h"
+#include "RTIMUSettings.h"
+
 
 class RTIMUSettings;
 
@@ -70,32 +73,42 @@ public:
 
     virtual bool IMUGyroBiasValid();
 
-    inline const RTVector3& getGyro() { return m_gyro; }            // gets gyro rates in radians/sec
-    inline const RTVector3& getAccel() { return m_accel; }          // get accel data in gs
-    inline const RTVector3& getCompass() { return m_compass; }      // gets compass data in uT
-    inline unsigned long getTimestamp() { return m_timestamp; }     // and the timestamp for it
+
+    bool getAccelCalibrationValid() { return !m_accelCalibrationMode && m_settings->m_accelCalValid; }
+
+
+    inline const RTVector3& getGyro() { return m_imuData.gyro; }            // gets gyro rates in radians/sec
+    inline const RTVector3& getAccel() { return m_imuData.accel; }          // get accel data in gs
+    inline const RTVector3& getCompass() { return m_imuData.compass; }      // gets compass data in uT
+    inline unsigned long getTimestamp() { return m_imuData.timestamp; }     // and the timestamp for it
 
 protected:
     void gyroBiasInit();                                    // sets up gyro bias calculation
     void handleGyroBias();                                  // adjust gyro for bias
     void calibrateAverageCompass();                         // calibrate and smooth compass
+    void calibrateAccel();                                  // calibrate the accelerometers
+    void updateFusion();                                    // call when new data to update fusion state
+
+    
     bool m_calibrationMode;                                 // true if cal mode so don't use cal data!
     bool m_calibrationValid;                                // tru if call data is valid and can be used
 
-    RTVector3 m_gyro;                                       // the gyro readings
-    RTVector3 m_accel;                                      // the accel readings
-    RTVector3 m_compass;                                    // the compass readings
-    unsigned long m_timestamp;                              // the timestamp
+
+    bool m_compassCalibrationMode;                          // true if cal mode so don't use cal data!
+    bool m_accelCalibrationMode;                            // true if cal mode so don't use cal data!
+
+    RTIMU_DATA m_imuData;                                   // the data from the IMU
 
     RTIMUSettings *m_settings;                              // the settings object pointer
+
+    RTFusion *m_fusion;                                     // the fusion algorithm
 
     int m_sampleRate;                                       // samples per second
     uint64_t m_sampleInterval;                              // interval between samples in microseonds
 
-    RTFLOAT m_gyroAlpha;                                    // gyro bias learning rate
+    RTFLOAT m_gyroLearningAlpha;                            // gyro bias rapid learning rate
+    RTFLOAT m_gyroContinuousAlpha;                          // gyro bias continuous (slow) learning rate
     int m_gyroSampleCount;                                  // number of gyro samples used
-    bool m_gyroBiasValid;                                   // true if the recorded gyro bias is valid
-    RTVector3 m_gyroBias;                                   // the recorded gyro bias
 
     RTVector3 m_previousAccel;                              // previous step accel for gyro learning
 
@@ -103,7 +116,20 @@ protected:
     RTFLOAT m_compassCalScale[3];
     RTVector3 m_compassAverage;                             // a running average to smooth the mag outputs
 
+    bool m_runtimeMagCalValid;                              // true if the runtime mag calibration has valid data
+    float m_runtimeMagCalMax[3];                            // runtime max mag values seen
+    float m_runtimeMagCalMin[3];                            // runtime min mag values seen
+
+
     static RTFLOAT m_axisRotation[9];                         // axis rotation matrix
+
+
+
+    RTFLOAT m_gyroAlpha;                                    // gyro bias learning rate
+    bool m_gyroBiasValid;                                   // true if the recorded gyro bias is valid
+    //RTVector3 m_gyroBias;                                   // the recorded gyro bias
+
+
 
  };
 

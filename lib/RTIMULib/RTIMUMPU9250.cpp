@@ -55,10 +55,26 @@ bool RTIMUMPU9250::setSampleRate(int rate)
     if ((rate < MPU9250_SAMPLERATE_MIN) || (rate > MPU9250_SAMPLERATE_MAX)) {
         return false;
     }
-    m_sampleRate = rate;
-    m_sampleInterval = (unsigned long)1000 / m_sampleRate;
-    if (m_sampleInterval == 0)
+
+       //  Note: rates interact with the lpf settings
+
+    if ((rate < MPU9250_SAMPLERATE_MAX) && (rate >= 8000))
+        rate = 8000;
+
+    if ((rate < 8000) && (rate >= 1000))
+        rate = 1000;
+
+    if (rate < 1000) {
+        int sampleDiv = (1000 / rate) - 1;
+        m_sampleRate = 1000 / (1 + sampleDiv);
+    } else {
+        m_sampleRate = rate;
+    }
+
+    m_sampleInterval = (uint64_t)1000000 / m_sampleRate;
+    if (m_sampleInterval == 0){
         m_sampleInterval = 1;
+    }
     return true;
 }
 
@@ -179,6 +195,15 @@ int RTIMUMPU9250::IMUInit()
     m_cacheIn = m_cacheOut = m_cacheCount = 0;
 #endif
 
+    m_imuData.fusionPoseValid = false;
+    m_imuData.fusionQPoseValid = false;
+    m_imuData.gyroValid = true;
+    m_imuData.accelValid = true;
+    m_imuData.compassValid = true;
+    m_imuData.pressureValid = false;
+    m_imuData.temperatureValid = false;
+    m_imuData.humidityValid = false;
+
     setSampleRate(m_settings->m_MPU9250GyroAccelSampleRate);
     setCompassRate(m_settings->m_MPU9250CompassSampleRate);
     setGyroLpf(m_settings->m_MPU9250GyroLpf);
@@ -209,7 +234,11 @@ int RTIMUMPU9250::IMUInit()
         _i2c->setClock(_i2cRate);
     }
 
- // select clock source to gyro
+    setCalibrationData();
+
+    //  reset the MPU9250
+
+   // select clock source to gyro
   if(writeRegister(MPU9250_PWR_MGMT_1, MPU9250_CLOCK_SEL_PLL) < 0){
     return -1;
   }
@@ -528,6 +557,7 @@ int RTIMUMPU9250::whoAmIAK8963(){
   return _buffer[0];
 }
 
+
 /* sets the sample rate divider to values other than default */
 int RTIMUMPU9250::setSrd(uint8_t srd) {
   // use low speed SPI for register setting
@@ -599,49 +629,7 @@ bool RTIMUMPU9250::resetFifo()
 
     return true;
 }
-/*
-bool RTIMUMPU9250::bypassOn()
-{
-    unsigned char userControl;
 
-    if (!I2Cdev::readByte(m_slaveAddr, MPU9250_USER_CTRL, &userControl))
-        return false;
-
-    userControl &= ~0x20;
-    userControl |= 2;
-
-    if (!writeRegister( MPU9250_USER_CTRL, userControl))
-        return false;
-
-    delay(50);
-
-    if (!writeRegister( MPU9250_INT_PIN_CFG, 0x82))
-        return false;
-
-    delay(50);
-    return true;
-}
-
-bool RTIMUMPU9250::bypassOff()
-{
-    unsigned char userControl;
-
-    if (!I2Cdev::readByte(m_slaveAddr, MPU9250_USER_CTRL, &userControl))
-        return false;
-
-    userControl |= 0x20;
-
-    if (!writeRegister( MPU9250_USER_CTRL, userControl))
-        return false;
-
-    delay(50);
-
-    if (!writeRegister( MPU9250_INT_PIN_CFG, 0x80))
-        return false;
-
-    delay(50);
-    return true;
-}
 
 bool RTIMUMPU9250::setGyroConfig()
 {
@@ -676,7 +664,9 @@ bool RTIMUMPU9250::setSampleRate()
 
     return true;
 }
-*/
+
+
+
 
 
 bool RTIMUMPU9250::setCompassRate()
@@ -685,16 +675,23 @@ bool RTIMUMPU9250::setCompassRate()
 
     rate = m_sampleRate / m_compassRate - 1;
 
-    if (rate > 31)
+    if (rate > 31){
         rate = 31;
-    if (!writeRegister( MPU9250_I2C_SLV4_CTRL, rate))
+    }
+    if (!writeRegister( MPU9250_I2C_SLV4_CTRL, rate)){
         return false;
+    }
     return true;  
 }
 
 int RTIMUMPU9250::IMUGetPollInterval()
 {
-    return (400 / m_sampleRate);
+    if (m_sampleRate > 400){
+        return 1;
+    }
+    else {
+        return (400 / m_sampleRate);
+    }
 } 
 
 bool RTIMUMPU9250::IMURead()
@@ -709,19 +706,22 @@ bool RTIMUMPU9250::IMURead()
 
     count = ((unsigned int)fifoCount[0] << 8) + fifoCount[1];
 
-    if (count == 1024) {
+    if (count >= 512) {
         resetFifo();
-        m_timestamp += m_sampleInterval * (1024 / MPU9250_FIFO_CHUNK_SIZE + 1); // try to fix timestamp
+        m_imuData.timestamp += m_sampleInterval * (512 / MPU9250_FIFO_CHUNK_SIZE + 1); // try to fix timestamp
         return false;
     }
 
+#ifdef MPU9250_CACHE_MODE
+
+# else
     if (count > MPU9250_FIFO_CHUNK_SIZE * 40) {
         // more than 40 samples behind - going too slowly so discard some samples but maintain timestamp correctly
         while (count >= MPU9250_FIFO_CHUNK_SIZE * 10) {
             if (!readRegisters( MPU9250_FIFO_R_W, MPU9250_FIFO_CHUNK_SIZE, fifoData))
                 return false;
             count -= MPU9250_FIFO_CHUNK_SIZE;
-            m_timestamp += m_sampleInterval;
+            m_imuData.timestamp += m_sampleInterval;
         }
     }
 
@@ -733,46 +733,51 @@ bool RTIMUMPU9250::IMURead()
 
     if (!readRegisters( MPU9250_EXT_SENS_DATA_00, 8, compassData))
         return false;
+#endif
 
-    RTMath::convertToVector(fifoData, m_accel, m_accelScale, true);
-    RTMath::convertToVector(fifoData + 6, m_gyro, m_gyroScale, true);
-    RTMath::convertToVector(compassData + 1, m_compass, 0.6f, false);
+    RTMath::convertToVector(fifoData, m_imuData.accel, m_accelScale, true);
+    RTMath::convertToVector(fifoData + 6, m_imuData.gyro, m_gyroScale, true);
+    RTMath::convertToVector(compassData + 1, m_imuData.compass, 0.6f, false);
 
     //  sort out gyro axes
+    m_imuData.gyro.setX(m_imuData.gyro.x());
+    m_imuData.gyro.setY(-m_imuData.gyro.y());
+    m_imuData.gyro.setZ(-m_imuData.gyro.z());
 
-    m_gyro.setY(-m_gyro.y());
-    m_gyro.setZ(-m_gyro.z());
 
     //  sort out accel data;
 
-    m_accel.setX(-m_accel.x());
+    m_imuData.accel.setX(-m_imuData.accel.x());
 
     //  use the fuse data adjustments for compass
 
-    m_compass.setX(m_compass.x() * m_compassAdjust[0]);
-    m_compass.setY(m_compass.y() * m_compassAdjust[1]);
-    m_compass.setZ(m_compass.z() * m_compassAdjust[2]);
+    m_imuData.compass.setX(m_imuData.compass.x() * m_compassAdjust[0]);
+    m_imuData.compass.setY(m_imuData.compass.y() * m_compassAdjust[1]);
+    m_imuData.compass.setZ(m_imuData.compass.z() * m_compassAdjust[2]);
 
     //  sort out compass axes
 
     float temp;
 
-    temp = m_compass.x();
-    m_compass.setX(m_compass.y());
-    m_compass.setY(-temp);
+    temp = m_imuData.compass.x();
+    m_imuData.compass.setX(m_imuData.compass.y());
+    m_imuData.compass.setY(-temp);
 
     //  now do standard processing
 
     handleGyroBias();
     calibrateAverageCompass();
+    calibrateAccel();
 
     if (m_firstTime)
-        m_timestamp = millis();
+        m_imuData.timestamp = millis();
     else
-        m_timestamp += m_sampleInterval;
+        m_imuData.timestamp += m_sampleInterval;
 
     m_firstTime = false;
 
+    //  now update the filter
+    updateFusion();
     return true;
 }
 #endif
