@@ -29,30 +29,47 @@
 #define CALLIB_DATA_VALID_LOW     0xfc // pattern to detect valid config - low byte
 #define CALLIB_DATA_VALID_HIGH    0x15 // pattern to detect valid config - high byte
 
-#ifdef __SAM3X8E__
-#define CALLIB_START  ((uint32_t *)(IFLASH1_ADDR + IFLASH1_SIZE - IFLASH1_PAGE_SIZE))
-#endif
-
 typedef struct
 {
-  unsigned char validL;                 // should contain the valid pattern if a good config
-  unsigned char validH;                 // should contain the valid pattern if a good config
-  unsigned char magValid;               // true if data valid
-  unsigned char pad;
-  float magMin[3];                      // min values
-  float magMax[3];                      // max values
+  unsigned char validL;                      // 0   should contain the valid pattern if a good config
+  unsigned char validH;                      // 1   should contain the valid pattern if a good config
+  unsigned char compassCalValid;             // 2   true if data valid
+  unsigned char compassCalEllipsoidValid;    // 3
+
+  float gyroBias[3];                         // 4   Gyro Bias
+  float compassCalMax[3];                    // 16  min values
+  float compassCalMin[3];                    // 28  max values
+  float compassCalEllipsoidOffset[3];        // 40
+  float compassCalEllipsoidCorr[3][3];       // 52
+  float accelCalMin[3];                      // 88
+  float accelCalMax[3];                      // 100
+                                             // 112
 } CALLIB_DATA;
 
-//  calLibErase() erases any current data in the EEPROM
+class CalLibEEPROM{
 
-void calLibErase(byte device);
+  public:
+  CalLibEEPROM(){}
+  ~CalLibEEPROM(){}
+  
+  bool init();
 
-//  calLibWrite() writes new data to the EEPROM
+  //  erases any current data in the EEPROM
+  bool erase();
 
-void calLibWrite(byte device, CALLIB_DATA * calData);
+  //  writes new data to the EEPROM
+  bool write(CALLIB_DATA * calData);
 
-//  calLibRead() reads existing data and returns true if valid else false in not.
+  //reads existing data and returns true if valid else false in not.
+  bool read(CALLIB_DATA * calData);
 
-boolean calLibRead(byte device, CALLIB_DATA * calData);
+
+    private:
+    unsigned length_{sizeof(CALLIB_DATA)};
+    bool valid_{false};
+};
+
+
+
 
 #endif // _CALLIB_H_

@@ -22,10 +22,7 @@
 //  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "RTIMUSettings.h"
-
-bool RTIMUSettings::saveSettings(){
-    return false;
-}
+#include "RTIMUHal.h"
 
 #if defined(MPU9150_68) || defined(MPU9150_69)
 #include "RTIMUMPU9150.h"
@@ -59,27 +56,63 @@ bool RTIMUSettings::saveSettings(){
 #include "RTPressureBMP180.h"
 #endif
 
-#if defined(LPS25H_5c) || defined (LPS25H_5d)
+#if defined(LPS25H_5c) || defined(LPS25H_5d)
 #include "RTPressureLPS25H.h"
 #endif
 
-#if defined(MS5611_76) || defined (MS5611_77)
+#if defined(MS5611_76) || defined(MS5611_77)
 #include "RTPressureMS5611.h"
 #endif
 
 #define RATE_TIMER_INTERVAL 2
 
-RTIMUSettings::RTIMUSettings()
+
+bool RTIMUSettings::init(){
+  if (!eeprom.init())
+    {
+        HAL_ERROR("Failed to initialize Calibration Storage memory.  Calibration values cannot be saved!");
+    }
+    return loadSettings();
+}
+
+void RTIMUSettings::setDefaults()
 {
     //  preset general defaults
 
-    m_imuType = -1;
+    m_I2CSlaveAddress = 0;
+    m_busIsI2C = true;
+    m_fusionType = RTFUSION_TYPE_RTQF;
+    m_I2CPressureAddress = 0;
+    m_I2CHumidityAddress = 0;
+    m_compassCalValid = false;
+    m_compassCalEllipsoidValid = false;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            m_compassCalEllipsoidCorr[i][j] = 0;
+        }
+    }
+    m_compassCalEllipsoidCorr[0][0] = 1;
+    m_compassCalEllipsoidCorr[1][1] = 1;
+    m_compassCalEllipsoidCorr[2][2] = 1;
+
+    m_compassAdjDeclination = 0;
+
+    m_accelCalValid = false;
+    m_gyroBiasValid = false;
+
+
+        //  preset general defaults
 
 #ifdef IC2_COMM
-    m_i2c_comm = true;
+    m_busIsI2C = true;
 #else
     m_i2c_comm = false;
 #endif
+
+    m_fusionType = RTFUSION_TYPE_RTQF;
+    m_I2CPressureAddress = 0;
+    m_I2CHumidityAddress = 0;
+    m_compassCalValid = false;
 
 #ifdef MPU9150_68
     //  MPU9150 defaults
@@ -313,5 +346,65 @@ RTIMUSettings::RTIMUSettings()
     m_pressureType = RTPRESSURE_TYPE_MS5611;
     m_I2CPressureAddress = MS5611_ADDRESS1;
 #endif
+}
 
+
+bool RTIMUSettings::saveSettings()
+{
+    calData_.compassCalValid = m_compassCalValid;
+    calData_.compassCalEllipsoidValid = m_compassCalEllipsoidValid;
+    for(auto i=0; i<3; i++){
+        calData_.gyroBias[i] = m_gyroBias.data(i);
+
+        calData_.compassCalMax[i] = m_compassCalMax.data(1);
+        calData_.accelCalMin[i] = m_compassCalMin.data(i);
+
+        calData_.accelCalMax[i] = m_accelCalMax.data(i);
+        calData_.accelCalMin[i] = m_accelCalMin.data(i);
+
+        if(m_compassCalEllipsoidValid){
+            calData_.compassCalEllipsoidOffset[i] = m_compassCalEllipsoidOffset.data(i);
+            for(auto j=0; j<3; j++){
+                 calData_.compassCalEllipsoidCorr[i][j] = m_compassCalEllipsoidCorr[i][j];
+            }
+        }
+    }
+
+    return eeprom.write(&calData_);
+}
+
+
+bool RTIMUSettings::loadSettings()
+{
+    setDefaults();
+
+    // pick up existing calibration data
+    if (eeprom.read(&calData_))
+    {
+        m_compassCalValid = calData_.compassCalValid;
+        m_compassCalEllipsoidValid = calData_.compassCalEllipsoidValid;
+        for(auto i=0; i<3; i++){
+            m_gyroBias.setData(i,  calData_.gyroBias[i]);
+
+            m_compassCalMax.setData(i, calData_.compassCalMax[i]);
+            m_compassCalMin.setData(i, calData_.accelCalMin[i]);
+
+            m_accelCalMax.setData(i, calData_.accelCalMax[i]);
+            m_accelCalMin.setData(i, calData_.accelCalMin[i]);
+
+            if(m_compassCalEllipsoidValid){
+                m_compassCalEllipsoidOffset.setData(i, calData_.compassCalEllipsoidOffset[i]);
+                for(auto j=0; j<3; j++){
+                    m_compassCalEllipsoidCorr[i][j] = calData_.compassCalEllipsoidCorr[i][j];
+                }
+            }
+        }
+        HAL_INFO("Calbiration settings loaded\n");
+        return true;
+    }
+    else{
+        HAL_ERROR("Failed to load calibration setting from EEPROM.");
+    }
+
+    return false; 
 }

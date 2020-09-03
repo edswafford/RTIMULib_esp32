@@ -26,24 +26,25 @@
 
 #include "RTMath.h"
 #include "RTIMULibDefs.h"
+#include "CalLib.h"
 
 class RTIMUSettings
 {
 public:
-    RTIMUSettings();
+    RTIMUSettings(){}
 
+    bool init();
     virtual bool saveSettings();
-    
+    void setDefaults();
+    bool loadSettings();
+
 
     //  These are the local variables
-    bool m_i2c_comm;
-    int m_imuType;                                          // type code of imu in use
+    bool m_busIsI2C;                                        // Using I2C for communication
     int m_fusionType;                                       // fusion algorithm type code
     unsigned char m_I2CSlaveAddress;                        // I2C slave address of the imu
-    int m_axisRotation;                                     // axis rotation code
-    int m_pressureType;                                     // type code of pressure sensor in use
+
     unsigned char m_I2CPressureAddress;                     // I2C slave address of the pressure sensor
-    int m_humidityType;                                     // type code of humidity sensor in use
     unsigned char m_I2CHumidityAddress;                     // I2C slave address of the humidity sensor
 
     bool m_compassCalValid;                                 // true if there is valid compass calibration data
@@ -144,6 +145,11 @@ public:
     int m_GD20HM303DLHCCompassSampleRate;                   // the compass sample rate
     int m_GD20HM303DLHCCompassFsr;                          // the compass full scale range
 #endif
+
+
+private:
+CalLibEEPROM eeprom;
+CALLIB_DATA calData_;                                  // the calibration data
 
 };
 

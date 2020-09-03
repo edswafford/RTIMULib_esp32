@@ -216,7 +216,7 @@ void RTIMU::setCalibrationData()
     CALLIB_DATA calData;
 
     m_calibrationValid = false;
-
+/*
     if (calLibRead(0, &calData)) {
         if (calData.magValid != 1) {
             return;
@@ -240,6 +240,7 @@ void RTIMU::setCalibrationData()
         }
         m_calibrationValid = true;
     }
+    */
 }
 
 void RTIMU::gyroBiasInit()

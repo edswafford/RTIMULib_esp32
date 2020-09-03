@@ -30,25 +30,26 @@
 
 RTIMU *imu;                                           // the IMU object
 RTIMUSettings settings;                               // the settings object
-CALLIB_DATA calData;                                  // the calibration data
+
 
 //  SERIAL_PORT_SPEED defines the speed to use for the debug serial port
-
 #define  SERIAL_PORT_SPEED  115200
 
 void setup()
 {
-  calLibRead(0, &calData);                           // pick up existing mag data if there   
+  Serial.begin(SERIAL_PORT_SPEED);
+  Serial.println("ArduinoMagCal starting");
+  Serial.println("Enter s to save current data to EEPROM");
 
+  
+/*
   calData.magValid = false;
   for (int i = 0; i < 3; i++) {
     calData.magMin[i] = 10000000;                    // init mag cal data
     calData.magMax[i] = -10000000;
   }
-   
-  Serial.begin(SERIAL_PORT_SPEED);
-  Serial.println("ArduinoMagCal starting");
-  Serial.println("Enter s to save current data to EEPROM");
+ */  
+
    
   imu = RTIMU::createIMU(&settings);
   int status_ = 0;                 
@@ -60,14 +61,15 @@ void setup()
     }
   }
   imu->setCalibrationMode(true);                     // make sure we get raw data
-  Serial.print("ArduinoIMU calibrating device "); Serial.println(imu->IMUName());
+  Serial.print("ArduinoIMU calibrating device "); 
+  Serial.println(imu->IMUName());
 }
 
 void loop()
 {  
   boolean changed;
   RTVector3 mag;
-  
+/*  
   if (imu->IMURead()) {                                 // get the latest data
     changed = false;
     mag = imu->getCompass();
@@ -100,4 +102,6 @@ void loop()
       Serial.print("Mag cal data saved for device "); Serial.println(imu->IMUName());
     }
   }
+
+  */
 }
