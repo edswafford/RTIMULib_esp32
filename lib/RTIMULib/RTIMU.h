@@ -82,6 +82,18 @@ public:
     inline const RTVector3& getCompass() { return m_imuData.compass; }      // gets compass data in uT
     inline unsigned long getTimestamp() { return m_imuData.timestamp; }     // and the timestamp for it
 
+    //  getIMUData returns the standard outputs of the IMU and fusion filter
+    const RTIMU_DATA& getIMUData() { return m_imuData; }
+
+    //  setCompassCalibrationMode() turns off use of cal data so that raw data can be accumulated
+    //  to derive calibration data
+    void setCompassCalibrationMode(bool enable) { m_compassCalibrationMode = enable; }
+
+    //  setAccelCalibrationMode() turns off use of cal data so that raw data can be accumulated
+    //  to derive calibration data
+    void setAccelCalibrationMode(bool enable) { m_accelCalibrationMode = enable; }
+
+
 protected:
     void gyroBiasInit();                                    // sets up gyro bias calculation
     void handleGyroBias();                                  // adjust gyro for bias
