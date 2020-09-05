@@ -175,7 +175,7 @@ void RTFusionKalman4::update()
     //    HAL_INFO(RTMath::displayMat4("Cov", m_Pkk));
 }
 
-void RTFusionKalman4::newIMUData(RTIMU_DATA& data, const RTIMUSettings *settings)
+void RTFusionKalman4::newIMUData(RTIMU_DATA& data, const RTIMUSettings& settings)
 {
     if (m_enableGyro)
         m_gyro = data.gyro;
@@ -187,7 +187,7 @@ void RTFusionKalman4::newIMUData(RTIMU_DATA& data, const RTIMUSettings *settings
 
     if (m_firstTime) {
         m_lastFusionTime = data.timestamp;
-        calculatePose(m_accel, m_compass, settings->m_compassAdjDeclination);
+        calculatePose(m_accel, m_compass, settings.m_compassAdjDeclination);
         m_Fk.fill(0);
 
         //  init covariance matrix to something
@@ -217,7 +217,7 @@ void RTFusionKalman4::newIMUData(RTIMU_DATA& data, const RTIMUSettings *settings
             HAL_INFO1("IMU update delta time: %f\n", m_timeDelta);
         }
 
-        calculatePose(data.accel, data.compass, settings->m_compassAdjDeclination);
+        calculatePose(data.accel, data.compass, settings.m_compassAdjDeclination);
 
         predict();
         update();

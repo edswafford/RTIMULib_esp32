@@ -24,7 +24,7 @@
 
 #include "RTFusionRTQF.h"
 #include "RTIMUSettings.h"
-
+#include "RTIMUHal.h"
 
 RTFusionRTQF::RTFusionRTQF()
 {
@@ -109,7 +109,7 @@ void RTFusionRTQF::update()
     }
 }
 
-void RTFusionRTQF::newIMUData(RTIMU_DATA& data, const RTIMUSettings *settings)
+void RTFusionRTQF::newIMUData(RTIMU_DATA& data, const RTIMUSettings& settings)
 {
     if (m_debug) {
         HAL_INFO("\n------\n");
@@ -127,7 +127,7 @@ void RTFusionRTQF::newIMUData(RTIMU_DATA& data, const RTIMUSettings *settings)
 
     if (m_firstTime) {
         m_lastFusionTime = data.timestamp;
-        calculatePose(m_accel, m_compass, settings->m_compassAdjDeclination);
+        calculatePose(m_accel, m_compass, settings.m_compassAdjDeclination);
 
         //  initialize the poses
 
@@ -141,13 +141,13 @@ void RTFusionRTQF::newIMUData(RTIMU_DATA& data, const RTIMUSettings *settings)
         if (m_timeDelta <= 0)
             return;
 
-        calculatePose(data.accel, data.compass, settings->m_compassAdjDeclination);
+        calculatePose(data.accel, data.compass, settings.m_compassAdjDeclination);
 
         predict();
         update();
         m_stateQ.toEuler(m_fusionPose);
         m_fusionQPose = m_stateQ;
-
+/*
         if (m_debug) {
             HAL_INFO(RTMath::displayRadians("Measured pose", m_measuredPose));
             HAL_INFO(RTMath::displayRadians("RTQF pose", m_fusionPose));
@@ -155,6 +155,7 @@ void RTFusionRTQF::newIMUData(RTIMU_DATA& data, const RTIMUSettings *settings)
             HAL_INFO(RTMath::display("RTQF quat", m_stateQ));
             HAL_INFO(RTMath::display("Error quat", m_stateQError));
          }
+*/
     }
     data.fusionPoseValid = true;
     data.fusionQPoseValid = true;

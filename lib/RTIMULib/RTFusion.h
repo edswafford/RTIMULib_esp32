@@ -25,8 +25,7 @@
 #define	_RTFUSION_H
 
 #include "RTIMULibDefs.h"
-#include "RTMath.h"
-#include "RTIMUHal.h"
+
 class RTIMUSettings;
 
 class RTFusion
@@ -51,7 +50,7 @@ public:
     //  newIMUData() should be called for subsequent updates
     //  the fusion fields are updated with the results
 
-    virtual void newIMUData(RTIMU_DATA& /* data */, const RTIMUSettings& /* settings */);
+    virtual void newIMUData(RTIMU_DATA&, const RTIMUSettings&) {}
 
     //  This static function returns performs the type to name mapping
 
