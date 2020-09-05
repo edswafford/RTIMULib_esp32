@@ -213,7 +213,7 @@ void doMagMinMaxCal()
 
       //  display 10 times per second
 
-      if ((now - displayTimer) > 100000)
+      if ((now - displayTimer) > 100)
       {
         displayMagMinMax();
         displayTimer = now;
@@ -260,6 +260,13 @@ bool pollIMU()
   }
 }
 
-void displayMagMinMax() {}
+void displayMagMinMax() {
+    Serial.printf("\n\n");
+    Serial.printf("Min x: %6.2f  min y: %6.2f  min z: %6.2f\n", magCal->m_magMin.data(0),
+           magCal->m_magMin.data(1), magCal->m_magMin.data(2));
+    Serial.printf("Max x: %6.2f  max y: %6.2f  max z: %6.2f\n", magCal->m_magMax.data(0),
+           magCal->m_magMax.data(1), magCal->m_magMax.data(2));
+    Serial.flush();
+}
 void displayMagEllipsoid() {}
 void displayAccelMinMax() {}
