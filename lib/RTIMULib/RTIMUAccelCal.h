@@ -35,8 +35,10 @@ class RTIMUAccelCal
 {
 
 public:
-    RTIMUAccelCal(RTIMUSettings *settings);
-    virtual ~RTIMUAccelCal();
+    RTIMUAccelCal(RTIMUSettings& settings) : m_settings(settings){
+        m_accelCalValid = false;
+    }
+    virtual ~RTIMUAccelCal(){};
 
     //  This should be called at the start of the calibration process
     //  Loads previous values if available
@@ -59,16 +61,14 @@ public:
     bool accelCalSave();                                    // saves the accel cal data for specified axes
 
     // these vars used during the calibration process
-
+    RTIMUSettings& m_settings;
     bool m_accelCalValid;                                   // true if the mag min/max data valid
     RTVector3 m_accelMin;                                   // the min values
     RTVector3 m_accelMax;                                   // the max values
 
     RTVector3 m_averageValue;                               // averaged value actually used
 
-    bool m_accelCalEnable[3];                               // the enable flags
-
-    RTIMUSettings *m_settings;
+    bool m_accelCalEnable[3]{false, false, false};                               // the enable flags
 
 };
 

@@ -176,7 +176,7 @@ class RTIMUMPU9250 : public RTIMU
 {
 public:
     RTIMUMPU9250() = delete;
-    RTIMUMPU9250(RTIMUSettings *settings);
+    RTIMUMPU9250(RTIMUSettings& settings);
 
     ~RTIMUMPU9250();
 

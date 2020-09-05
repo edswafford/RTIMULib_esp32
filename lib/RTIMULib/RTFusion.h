@@ -50,7 +50,7 @@ public:
     //  newIMUData() should be called for subsequent updates
     //  the fusion fields are updated with the results
 
-    virtual void newIMUData(RTIMU_DATA& /* data */, const RTIMUSettings * /* settings */) {}
+    virtual void newIMUData(RTIMU_DATA& /* data */, const RTIMUSettings& /* settings */) {}
 
     //  This static function returns performs the type to name mapping
 

@@ -22,24 +22,25 @@
 //  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "RTIMU.h"
+#include "RTIMUHal.h"
 #include "RTIMUSettings.h"
 #include "CalLib.h"
 
 //  this sets the learning rate for compass running average calculation
 
-#define COMPASS_ALPHA                   (RTFLOAT)0.2
+#define COMPASS_ALPHA (RTFLOAT)0.2
 
 //  this defines the accelerometer noise level
 
-#define RTIMU_FUZZY_GYRO_ZERO           (RTFLOAT)0.20
+#define RTIMU_FUZZY_GYRO_ZERO (RTFLOAT)0.20
 
-#define RTIMU_FUZZY_GYRO_ZERO_SQUARED   (RTIMU_FUZZY_GYRO_ZERO * RTIMU_FUZZY_GYRO_ZERO)
+#define RTIMU_FUZZY_GYRO_ZERO_SQUARED (RTIMU_FUZZY_GYRO_ZERO * RTIMU_FUZZY_GYRO_ZERO)
 
 //  this defines the accelerometer noise level
 
-#define RTIMU_FUZZY_ACCEL_ZERO          (RTFLOAT)0.05
+#define RTIMU_FUZZY_ACCEL_ZERO (RTFLOAT)0.05
 
-#define RTIMU_FUZZY_ACCEL_ZERO_SQUARED   (RTIMU_FUZZY_ACCEL_ZERO * RTIMU_FUZZY_ACCEL_ZERO)
+#define RTIMU_FUZZY_ACCEL_ZERO_SQUARED (RTIMU_FUZZY_ACCEL_ZERO * RTIMU_FUZZY_ACCEL_ZERO)
 
 //  Axis rotation array
 
@@ -84,7 +85,7 @@ RTFLOAT RTIMU::m_axisRotation[9] = {0, 0, 1, 0, 1, 0, -1, 0, 0};
 #endif
 
 #ifdef RTIMU_XUP_YSOUTH
-    {0, -1, 0, 0, 0, 1, -1, 0, 0};
+{0, -1, 0, 0, 0, 1, -1, 0, 0};
 #endif
 
 #ifdef RTIMU_XUP_YWEST
@@ -139,7 +140,6 @@ RTFLOAT RTIMU::m_axisRotation[9] = {-1, 0, 0, 0, 0, 1, 0, 1, 0};
 RTFLOAT RTIMU::m_axisRotation[9] = {0, 0, -1, -1, 0, 0, 0, 1, 0};
 #endif
 
-
 #if defined(MPU9150_68) || defined(MPU9150_69)
 #include "RTIMUMPU9150.h"
 #endif
@@ -168,7 +168,7 @@ RTFLOAT RTIMU::m_axisRotation[9] = {0, 0, -1, -1, 0, 0, 0, 1, 0};
 #include "RTIMUBNO055.h"
 #endif
 
-RTIMU *RTIMU::createIMU(RTIMUSettings *settings)
+RTIMU *RTIMU::createIMU(RTIMUSettings& settings)
 {
 #if defined(MPU9150_68) || defined(MPU9150_69)
     return new RTIMUMPU9150(settings);
@@ -193,15 +193,10 @@ RTIMU *RTIMU::createIMU(RTIMUSettings *settings)
 #endif
 }
 
-
-RTIMU::RTIMU(RTIMUSettings *settings)
-{
-    m_settings = settings;
-
-    m_calibrationMode = false;
-    m_calibrationValid = false;
-    m_gyroBiasValid = false;
-}
+RTIMU::RTIMU(RTIMUSettings& settings) : m_settings(settings), m_calibrationMode(false),
+    m_calibrationValid(false),
+    m_gyroBiasValid(false)
+{}
 
 RTIMU::~RTIMU()
 {
@@ -213,34 +208,56 @@ void RTIMU::setCalibrationData()
 {
     float maxDelta = -1;
     float delta;
-    CALLIB_DATA calData;
-
-    m_calibrationValid = false;
-/*
-    if (calLibRead(0, &calData)) {
-        if (calData.magValid != 1) {
-            return;
-        }
-
+    if (m_settings.m_compassCalValid)
+    {
         //  find biggest range
 
-        for (int i = 0; i < 3; i++) {
-            if ((calData.magMax[i] - calData.magMin[i]) > maxDelta)
-                maxDelta = calData.magMax[i] - calData.magMin[i];
+        for (int i = 0; i < 3; i++)
+        {
+            if ((m_settings.m_compassCalMax.data(i) - m_settings.m_compassCalMin.data(i)) > maxDelta)
+                maxDelta = m_settings.m_compassCalMax.data(i) - m_settings.m_compassCalMin.data(i);
         }
-        if (maxDelta < 0) {
+        if (maxDelta < 0)
+        {
+            HAL_ERROR("Error in compass calibration data\n");
             return;
         }
-        maxDelta /= 2.0f;                                       // this is the max +/- range
+        maxDelta /= 2.0f; // this is the max +/- range
 
-        for (int i = 0; i < 3; i++) {
-            delta = (calData.magMax[i] - calData.magMin[i]) / 2.0f;
-            m_compassCalScale[i] = maxDelta / delta;            // makes everything the same range
-            m_compassCalOffset[i] = (calData.magMax[i] + calData.magMin[i]) / 2.0f;
+        for (int i = 0; i < 3; i++)
+        {
+            delta = (m_settings.m_compassCalMax.data(i) - m_settings.m_compassCalMin.data(i)) / 2.0f;
+            m_compassCalScale[i] = maxDelta / delta; // makes everything the same range
+            m_compassCalOffset[i] = (m_settings.m_compassCalMax.data(i) + m_settings.m_compassCalMin.data(i)) / 2.0f;
         }
-        m_calibrationValid = true;
     }
-    */
+
+    if (m_settings.m_compassCalValid)
+    {
+        HAL_INFO("Using min/max compass calibration\n");
+    }
+    else
+    {
+        HAL_INFO("min/max compass calibration not in use\n");
+    }
+
+    if (m_settings.m_compassCalEllipsoidValid)
+    {
+        HAL_INFO("Using ellipsoid compass calibration\n");
+    }
+    else
+    {
+        HAL_INFO("Ellipsoid compass calibration not in use\n");
+    }
+
+    if (m_settings.m_accelCalValid)
+    {
+        HAL_INFO("Using accel calibration\n");
+    }
+    else
+    {
+        HAL_INFO("Accel calibration not in use\n");
+    }
 }
 
 void RTIMU::gyroBiasInit()
@@ -255,7 +272,7 @@ void RTIMU::gyroBiasInit()
 void RTIMU::handleGyroBias()
 {
     // do axis rotation if necessary
-#ifndef  RTIMU_XNORTH_YEAST
+#ifndef RTIMU_XNORTH_YEAST
     // need to do an axis rotation
     float *matrix = m_axisRotation;
     RTVector3 tempGyro = m_gyro;
@@ -263,93 +280,113 @@ void RTIMU::handleGyroBias()
     RTVector3 tempCompass = m_compass;
 
     // do new x value
-    if (matrix[0] != 0) {
+    if (matrix[0] != 0)
+    {
         m_gyro.setX(tempGyro.x() * matrix[0]);
         m_accel.setX(tempAccel.x() * matrix[0]);
         m_compass.setX(tempCompass.x() * matrix[0]);
-    } else if (matrix[1] != 0) {
+    }
+    else if (matrix[1] != 0)
+    {
         m_gyro.setX(tempGyro.y() * matrix[1]);
         m_accel.setX(tempAccel.y() * matrix[1]);
         m_compass.setX(tempCompass.y() * matrix[1]);
-    } else if (matrix[2] != 0) {
+    }
+    else if (matrix[2] != 0)
+    {
         m_gyro.setX(tempGyro.z() * matrix[2]);
         m_accel.setX(tempAccel.z() * matrix[2]);
         m_compass.setX(tempCompass.z() * matrix[2]);
     }
 
     // do new y value
-    if (matrix[3] != 0) {
+    if (matrix[3] != 0)
+    {
         m_gyro.setY(tempGyro.x() * matrix[3]);
         m_accel.setY(tempAccel.x() * matrix[3]);
         m_compass.setY(tempCompass.x() * matrix[3]);
-    } else if (matrix[4] != 0) {
+    }
+    else if (matrix[4] != 0)
+    {
         m_gyro.setY(tempGyro.y() * matrix[4]);
         m_accel.setY(tempAccel.y() * matrix[4]);
         m_compass.setY(tempCompass.y() * matrix[4]);
-    } else if (matrix[5] != 0) {
+    }
+    else if (matrix[5] != 0)
+    {
         m_gyro.setY(tempGyro.z() * matrix[5]);
         m_accel.setY(tempAccel.z() * matrix[5]);
         m_compass.setY(tempCompass.z() * matrix[5]);
     }
 
     // do new z value
-    if (matrix[6] != 0) {
+    if (matrix[6] != 0)
+    {
         m_gyro.setZ(tempGyro.x() * matrix[6]);
         m_accel.setZ(tempAccel.x() * matrix[6]);
         m_compass.setZ(tempCompass.x() * matrix[6]);
-    } else if (matrix[7] != 0) {
+    }
+    else if (matrix[7] != 0)
+    {
         m_gyro.setZ(tempGyro.y() * matrix[7]);
         m_accel.setZ(tempAccel.y() * matrix[7]);
         m_compass.setZ(tempCompass.y() * matrix[7]);
-    } else if (matrix[8] != 0) {
+    }
+    else if (matrix[8] != 0)
+    {
         m_gyro.setZ(tempGyro.z() * matrix[8]);
         m_accel.setZ(tempAccel.z() * matrix[8]);
         m_compass.setZ(tempCompass.z() * matrix[8]);
     }
 #endif
-    
-    if (!m_gyroBiasValid) {
+
+    if (!m_gyroBiasValid)
+    {
         RTVector3 deltaAccel = m_previousAccel;
-        deltaAccel -= m_imuData.accel;   // compute difference
+        deltaAccel -= m_imuData.accel; // compute difference
         m_previousAccel = m_imuData.accel;
 
         if ((deltaAccel.squareLength() < RTIMU_FUZZY_ACCEL_ZERO_SQUARED) &&
-            (m_imuData.gyro.squareLength() < RTIMU_FUZZY_GYRO_ZERO_SQUARED)) {
+            (m_imuData.gyro.squareLength() < RTIMU_FUZZY_GYRO_ZERO_SQUARED))
+        {
             // what we are seeing on the gyros should be bias only so learn from this
-            m_settings->m_gyroBias.setX((1.0 - m_gyroAlpha) * m_settings->m_gyroBias.x() + m_gyroAlpha * m_imuData.gyro.x());
-            m_settings->m_gyroBias.setY((1.0 - m_gyroAlpha) * m_settings->m_gyroBias.y() + m_gyroAlpha * m_imuData.gyro.y());
-            m_settings->m_gyroBias.setZ((1.0 - m_gyroAlpha) * m_settings->m_gyroBias.z() + m_gyroAlpha * m_imuData.gyro.z());
+            m_settings.m_gyroBias.setX((1.0 - m_gyroAlpha) * m_settings.m_gyroBias.x() + m_gyroAlpha * m_imuData.gyro.x());
+            m_settings.m_gyroBias.setY((1.0 - m_gyroAlpha) * m_settings.m_gyroBias.y() + m_gyroAlpha * m_imuData.gyro.y());
+            m_settings.m_gyroBias.setZ((1.0 - m_gyroAlpha) * m_settings.m_gyroBias.z() + m_gyroAlpha * m_imuData.gyro.z());
 
-            if (m_gyroSampleCount < (5 * m_sampleRate)) {
+            if (m_gyroSampleCount < (5 * m_sampleRate))
+            {
                 m_gyroSampleCount++;
 
-                if (m_gyroSampleCount == (5 * m_sampleRate)) {
+                if (m_gyroSampleCount == (5 * m_sampleRate))
+                {
                     m_gyroBiasValid = true;
                 }
             }
         }
     }
 
-    m_imuData.gyro -= m_settings->m_gyroBias;
+    m_imuData.gyro -= m_settings.m_gyroBias;
 }
 
 void RTIMU::calibrateAverageCompass()
 {
     //  calibrate if required
 
-    if (!m_calibrationMode && m_calibrationValid) {
-        m_imuData.compass.setX(( m_imuData.compass.x() - m_compassCalOffset[0]) * m_compassCalScale[0]);
-         m_imuData.compass.setY(( m_imuData.compass.y() - m_compassCalOffset[1]) * m_compassCalScale[1]);
-         m_imuData.compass.setZ(( m_imuData.compass.z() - m_compassCalOffset[2]) * m_compassCalScale[2]);
+    if (!m_calibrationMode && m_calibrationValid)
+    {
+        m_imuData.compass.setX((m_imuData.compass.x() - m_compassCalOffset[0]) * m_compassCalScale[0]);
+        m_imuData.compass.setY((m_imuData.compass.y() - m_compassCalOffset[1]) * m_compassCalScale[1]);
+        m_imuData.compass.setZ((m_imuData.compass.z() - m_compassCalOffset[2]) * m_compassCalScale[2]);
     }
 
     //  update running average
 
-    m_compassAverage.setX( m_imuData.compass.x() * COMPASS_ALPHA + m_compassAverage.x() * (1.0 - COMPASS_ALPHA));
-    m_compassAverage.setY( m_imuData.compass.y() * COMPASS_ALPHA + m_compassAverage.y() * (1.0 - COMPASS_ALPHA));
-    m_compassAverage.setZ( m_imuData.compass.z() * COMPASS_ALPHA + m_compassAverage.z() * (1.0 - COMPASS_ALPHA));
+    m_compassAverage.setX(m_imuData.compass.x() * COMPASS_ALPHA + m_compassAverage.x() * (1.0 - COMPASS_ALPHA));
+    m_compassAverage.setY(m_imuData.compass.y() * COMPASS_ALPHA + m_compassAverage.y() * (1.0 - COMPASS_ALPHA));
+    m_compassAverage.setZ(m_imuData.compass.z() * COMPASS_ALPHA + m_compassAverage.z() * (1.0 - COMPASS_ALPHA));
 
-     m_imuData.compass = m_compassAverage;
+    m_imuData.compass = m_compassAverage;
 }
 
 void RTIMU::calibrateAccel()
@@ -358,19 +395,19 @@ void RTIMU::calibrateAccel()
         return;
 
     if (m_imuData.accel.x() >= 0)
-        m_imuData.accel.setX(m_imuData.accel.x() / m_settings->m_accelCalMax.x());
+        m_imuData.accel.setX(m_imuData.accel.x() / m_settings.m_accelCalMax.x());
     else
-        m_imuData.accel.setX(m_imuData.accel.x() / -m_settings->m_accelCalMin.x());
+        m_imuData.accel.setX(m_imuData.accel.x() / -m_settings.m_accelCalMin.x());
 
     if (m_imuData.accel.y() >= 0)
-        m_imuData.accel.setY(m_imuData.accel.y() / m_settings->m_accelCalMax.y());
+        m_imuData.accel.setY(m_imuData.accel.y() / m_settings.m_accelCalMax.y());
     else
-        m_imuData.accel.setY(m_imuData.accel.y() / -m_settings->m_accelCalMin.y());
+        m_imuData.accel.setY(m_imuData.accel.y() / -m_settings.m_accelCalMin.y());
 
     if (m_imuData.accel.z() >= 0)
-        m_imuData.accel.setZ(m_imuData.accel.z() / m_settings->m_accelCalMax.z());
+        m_imuData.accel.setZ(m_imuData.accel.z() / m_settings.m_accelCalMax.z());
     else
-        m_imuData.accel.setZ(m_imuData.accel.z() / -m_settings->m_accelCalMin.z());
+        m_imuData.accel.setZ(m_imuData.accel.z() / -m_settings.m_accelCalMin.z());
 }
 
 void RTIMU::updateFusion()
@@ -382,5 +419,3 @@ bool RTIMU::IMUGyroBiasValid()
 {
     return m_gyroBiasValid;
 }
-
-

@@ -37,11 +37,11 @@ class RTIMU
 public:
     //  IMUs should always be created with the following call
 
-    static RTIMU *createIMU(RTIMUSettings *settings);
+    static RTIMU *createIMU(RTIMUSettings& settings);
 
     //  Constructor/destructor
 
-    RTIMU(RTIMUSettings *settings);
+    RTIMU(RTIMUSettings& settings);
     virtual ~RTIMU();
 
     //  These functions must be provided by sub classes
@@ -74,7 +74,7 @@ public:
     virtual bool IMUGyroBiasValid();
 
 
-    bool getAccelCalibrationValid() { return !m_accelCalibrationMode && m_settings->m_accelCalValid; }
+    bool getAccelCalibrationValid() { return !m_accelCalibrationMode && m_settings.m_accelCalValid; }
 
 
     inline const RTVector3& getGyro() { return m_imuData.gyro; }            // gets gyro rates in radians/sec
@@ -101,7 +101,8 @@ protected:
     void calibrateAccel();                                  // calibrate the accelerometers
     void updateFusion();                                    // call when new data to update fusion state
 
-    
+    RTIMUSettings& m_settings;                              // the settings object pointer
+ 
     bool m_calibrationMode;                                 // true if cal mode so don't use cal data!
     bool m_calibrationValid;                                // tru if call data is valid and can be used
 
@@ -110,8 +111,6 @@ protected:
     bool m_accelCalibrationMode;                            // true if cal mode so don't use cal data!
 
     RTIMU_DATA m_imuData;                                   // the data from the IMU
-
-    RTIMUSettings *m_settings;                              // the settings object pointer
 
     RTFusion *m_fusion;                                     // the fusion algorithm
 

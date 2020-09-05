@@ -40,7 +40,7 @@
 
 #if defined(MPU9250_68) || defined(MPU9250_69)
 
-    RTIMUMPU9250::RTIMUMPU9250(RTIMUSettings *settings) : RTIMU(settings) {
+    RTIMUMPU9250::RTIMUMPU9250(RTIMUSettings& settings) : RTIMU(settings) {
 
      }
 
@@ -204,13 +204,13 @@ int RTIMUMPU9250::IMUInit()
     m_imuData.temperatureValid = false;
     m_imuData.humidityValid = false;
 
-    setSampleRate(m_settings->m_MPU9250GyroAccelSampleRate);
-    setCompassRate(m_settings->m_MPU9250CompassSampleRate);
-    setGyroLpf(m_settings->m_MPU9250GyroLpf);
-    setAccelLpf(m_settings->m_MPU9250AccelLpf);
-    setGyroFsr(m_settings->m_MPU9250GyroFsr);
+    setSampleRate(m_settings.m_MPU9250GyroAccelSampleRate);
+    setCompassRate(m_settings.m_MPU9250CompassSampleRate);
+    setGyroLpf(m_settings.m_MPU9250GyroLpf);
+    setAccelLpf(m_settings.m_MPU9250AccelLpf);
+    setGyroFsr(m_settings.m_MPU9250GyroFsr);
 
-    _useSPI = !m_settings->m_busIsI2C;
+    _useSPI = !m_settings.m_busIsI2C;
     
     if (_useSPI) // using SPI for communication
     {
@@ -226,7 +226,7 @@ int RTIMUMPU9250::IMUInit()
     else // using I2C for communication
     {
       _i2c = &Wire;
-      _address = m_settings->m_I2CSlaveAddress;
+      _address = m_settings.m_I2CSlaveAddress;
 
         // starting the I2C bus
         _i2c->begin();

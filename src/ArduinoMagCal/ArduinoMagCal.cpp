@@ -46,11 +46,13 @@ void displayAccelMinMax();
 //  SERIAL_PORT_SPEED defines the speed to use for the debug serial port
 #define SERIAL_PORT_SPEED 115200
 
+RTIMUSettings settings; // the settings object
+
 RTIMU *imu; // the IMU object
 RTIMUMagCal *magCal;
 RTIMUAccelCal *accelCal;
 
-RTIMUSettings settings; // the settings object
+
 RTIMU_DATA imuData;
 bool magMinMaxDone;
 bool mustExit = false;
@@ -59,12 +61,11 @@ void setup()
 {
   Serial.begin(SERIAL_PORT_SPEED);
   Serial.println("ArduinoMagCal starting");
-  Serial.println("Enter s to save current data to EEPROM");
 
   // Initialize Calibration (Load from EEPROM)
   settings.init();
 
-  imu = RTIMU::createIMU(&settings);
+  imu = RTIMU::createIMU(settings);
   int status_ = 0;
   while ((status_ = imu->IMUInit()) < 0)
   {
@@ -79,10 +80,10 @@ void setup()
   //  set up for calibration run
   imu->setCompassCalibrationMode(true);
   imu->setAccelCalibrationMode(true);
-  magCal = new RTIMUMagCal(&settings);
+  magCal = new RTIMUMagCal(settings);
   magCal->magCalInit();
   magMinMaxDone = false;
-  accelCal = new RTIMUAccelCal(&settings);
+  accelCal = new RTIMUAccelCal(settings);
   accelCal->accelCalInit();
 
   Serial.print("ArduinoIMU calibrating device ");

@@ -27,23 +27,12 @@
 
 #define ACCEL_ALPHA                     0.1f
 
-RTIMUAccelCal::RTIMUAccelCal(RTIMUSettings *settings)
-{
-    m_settings = settings;
-    for (int i = 0; i < 3; i++)
-        m_accelCalEnable[i] = false;
-}
-
-RTIMUAccelCal::~RTIMUAccelCal()
-{
-
-}
 
 void RTIMUAccelCal::accelCalInit()
 {
-    if (m_settings->m_accelCalValid) {
-        m_accelMin = m_settings->m_accelCalMin;
-        m_accelMax = m_settings->m_accelCalMax;
+    if (m_settings.m_accelCalValid) {
+        m_accelMin = m_settings.m_accelCalMin;
+        m_accelMax = m_settings.m_accelCalMax;
     } else {
         m_accelMin = RTVector3(RTIMUCALDEFS_DEFAULT_MIN, RTIMUCALDEFS_DEFAULT_MIN, RTIMUCALDEFS_DEFAULT_MIN);
         m_accelMax = RTVector3(RTIMUCALDEFS_DEFAULT_MAX, RTIMUCALDEFS_DEFAULT_MAX, RTIMUCALDEFS_DEFAULT_MAX);
@@ -95,9 +84,9 @@ bool RTIMUAccelCal::accelCalSave()
     if (!accelCalValid())
         return false;
 
-    m_settings->m_accelCalValid = true;
-    m_settings->m_accelCalMin = m_accelMin;
-    m_settings->m_accelCalMax = m_accelMax;
-    m_settings->saveSettings();
+    m_settings.m_accelCalValid = true;
+    m_settings.m_accelCalMin = m_accelMin;
+    m_settings.m_accelCalMax = m_accelMax;
+    m_settings.saveSettings();
     return true;
 }
