@@ -31,7 +31,6 @@
 #include "RTIMUMagCal.h"
 #include "RTIMUAccelCal.h"
 
-
 // forward definition
 void displayMenu();
 void doMagMinMaxCal();
@@ -52,10 +51,20 @@ RTIMU *imu; // the IMU object
 RTIMUMagCal *magCal;
 RTIMUAccelCal *accelCal;
 
-
 RTIMU_DATA imuData;
 bool magMinMaxDone;
 bool mustExit = false;
+char get_char()
+{
+  int ch = 0;
+  while (ch <= 0)
+  {
+    delay(250);
+    ch = Serial.read();
+  }
+  return char(ch);
+}
+
 
 void setup()
 {
@@ -95,7 +104,7 @@ void loop()
   while (!mustExit)
   {
     displayMenu();
-    switch (tolower(Serial.read()))
+    switch (tolower(get_char()))
     {
     case 'x':
       mustExit = true;
@@ -187,7 +196,7 @@ void doMagMinMaxCal()
   Serial.printf("When all extrema have been achieved, enter 's' to save, 'r' to reset\n");
   Serial.printf("or 'x' to abort and discard the data.\n");
   Serial.printf("\nPress any key to start...");
-  Serial.read();
+  get_char();
 
   displayTimer = millis();
 
