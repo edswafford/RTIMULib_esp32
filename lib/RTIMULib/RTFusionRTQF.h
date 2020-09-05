@@ -27,12 +27,13 @@
 #ifndef RTARDULINK_MODE
 
 #include "RTMath.h"
+#include "RTFusion.h"
 
 //  Define this symbol to use more scientific prediction correction
 
 #define USE_SLERP
 
-class RTFusionRTQF
+class RTFusionRTQF : public RTFusion
 {
 public:
     RTFusionRTQF();

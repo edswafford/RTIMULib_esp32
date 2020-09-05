@@ -42,21 +42,21 @@ typedef float RTFLOAT;
 #define	RTMATH_RAD_TO_DEGREE        (180.0 / M_PI)
 
 class RTVector3;
-
-#ifndef RTARDULINK_MODE
+class RTMatrix4x4;
 class RTQuaternion;
-#endif
 
 class RTMath
 {
 public:
-#ifndef RTARDULINK_MODE
     // convenient display routines
+void display(const char *label, RTVector3& vec);
 
-    static void display(const char *label, RTVector3& vec);
-    static void displayDegrees(const char *label, RTVector3& vec);
-    static void displayRollPitchYaw(const char *label, RTVector3& vec);
-    static void display(const char *label, RTQuaternion& quat);
+const char *displayRadians(const char *label, RTVector3& vec);
+const char *displayDegrees(const char *label, RTVector3& vec);
+const char *displayQuat(const char *label, RTQuaternion& quat);
+const char *displayMat4(const char *label, RTMatrix4x4& mat);
+
+
 
     //  poseFromAccelMag generates pose Euler angles from measured settings
 
@@ -66,7 +66,8 @@ public:
 
     static void convertToVector(unsigned char *rawData, RTVector3& vec, RTFLOAT scale, bool bigEndian);
 
-#endif // #ifndef RTARDULINK_MODE
+private:
+    static char m_string[512];                             // for the display routines
 };
 
 
@@ -94,7 +95,7 @@ public:
     inline void setZ(const RTFLOAT val) { m_data[2] = val; }
     inline void setData(const int i, RTFLOAT val) { m_data[i] = val; }
 
-    #ifndef RTARDULINK_MODE
+
     RTFLOAT length();
     void normalize();
 
@@ -106,13 +107,12 @@ public:
 
     void accelToEuler(RTVector3& rollPitchYaw) const;
     void accelToQuaternion(RTQuaternion& qPose) const;
-#endif // #ifndef RTARDULINK_MODE
+
 
 private:
     RTFLOAT m_data[3];
 };
 
-#ifndef RTARDULINK_MODE
 class RTQuaternion
 {
 public:
@@ -156,6 +156,35 @@ public:
 private:
     RTFLOAT m_data[4];
 };
-#endif // #ifndef RTARDULINK_MODE
+
+class RTMatrix4x4
+{
+public:
+    RTMatrix4x4();
+
+    RTMatrix4x4& operator +=(const RTMatrix4x4& mat);
+    RTMatrix4x4& operator -=(const RTMatrix4x4& mat);
+    RTMatrix4x4& operator *=(const RTFLOAT val);
+
+    RTMatrix4x4& operator =(const RTMatrix4x4& vec);
+    const RTQuaternion operator *(const RTQuaternion& q) const;
+    const RTMatrix4x4 operator *(const RTFLOAT val) const;
+    const RTMatrix4x4 operator *(const RTMatrix4x4& mat) const;
+    const RTMatrix4x4 operator +(const RTMatrix4x4& mat) const;
+
+    inline RTFLOAT val(int row, int col) const { return m_data[row][col]; }
+    inline void setVal(int row, int col, RTFLOAT val) { m_data[row][col] = val; }
+    void fill(RTFLOAT val);
+    void setToIdentity();
+
+    RTMatrix4x4 inverted();
+    RTMatrix4x4 transposed();
+
+private:
+    RTFLOAT m_data[4][4];                                   // row, column
+
+    RTFLOAT matDet();
+    RTFLOAT matMinor(const int row, const int col);
+};
 
 #endif /* _RTMATH_H_ */

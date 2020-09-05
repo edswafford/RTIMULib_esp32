@@ -24,6 +24,9 @@
 #include "RTIMU.h"
 #include "RTIMUHal.h"
 #include "RTIMUSettings.h"
+#include "RTFusion.h"
+#include "RTFusionKalman4.h"
+#include "RTFusionRTQF.h"
 #include "CalLib.h"
 
 //  this sets the learning rate for compass running average calculation
@@ -202,7 +205,7 @@ RTIMU::RTIMU(RTIMUSettings& settings) : m_settings(settings), m_calibrationMode(
         m_runtimeMagCalMin[i] = 1000;
     }
 
-    switch (m_settings->m_fusionType) {
+    switch (m_settings.m_fusionType) {
     case RTFUSION_TYPE_KALMANSTATE4:
         m_fusion = new RTFusionKalman4();
         break;
@@ -215,7 +218,7 @@ RTIMU::RTIMU(RTIMUSettings& settings) : m_settings(settings), m_calibrationMode(
         m_fusion = new RTFusion();
         break;
     }
-    HAL_INFO1("Using fusion algorithm %s\n", RTFusion::fusionName(m_settings->m_fusionType));
+    HAL_INFO1("Using fusion algorithm %s\n", RTFusion::fusionName(m_settings.m_fusionType));
 }
 
 RTIMU::~RTIMU()

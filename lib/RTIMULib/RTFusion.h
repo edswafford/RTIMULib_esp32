@@ -25,6 +25,7 @@
 #define	_RTFUSION_H
 
 #include "RTIMULibDefs.h"
+#include "RTMath.h"
 
 class RTIMUSettings;
 
