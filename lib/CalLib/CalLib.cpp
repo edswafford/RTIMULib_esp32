@@ -39,6 +39,7 @@ bool CalLibEEPROM::erase()
   {
     EEPROM.write(0, 0); // just destroy the valid byte
   }
+  EEPROM.commit();
   return valid_;
 }
 
@@ -51,8 +52,18 @@ bool CalLibEEPROM::write(CALLIB_DATA *calData)
     calData->validL = CALLIB_DATA_VALID_LOW;
     calData->validH = CALLIB_DATA_VALID_HIGH;
 
-    for (byte i = 0; i < length_; i++)
+    for (byte i = 0; i < length_; i++){
       EEPROM.write(i, *ptr++);
+    }
+    EEPROM.commit();
+
+    // Validate
+    ptr = (byte *)calData;
+    for (byte i = 0; i < length_; i++){
+      if(*ptr++ != EEPROM.read(i)) {
+        return false;
+      }
+    }
   }
   return valid_;
 }

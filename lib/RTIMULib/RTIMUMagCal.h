@@ -74,9 +74,9 @@ public:
 
     // these vars used during the calibration process
     RTIMUSettings m_settings;
-    RTVector3 m_magMin;                                     // the min values
+   RTVector3 m_magMin;                                     // the min values
     RTVector3 m_magMax;                                     // the max values
-
+ 
 
 private:
     RTVector3 removeMagCalData();                           // takes an entry out of the buffer

@@ -49,6 +49,10 @@ RTIMUSettings settings; // the settings object
 
 RTIMU *imu; // the IMU object
 RTIMUMagCal *magCal;
+
+RTVector3 prev_magMin_ = RTVector3(RTIMUCALDEFS_DEFAULT_MIN, RTIMUCALDEFS_DEFAULT_MIN, RTIMUCALDEFS_DEFAULT_MIN);
+RTVector3 prev_magMax_ = RTVector3(RTIMUCALDEFS_DEFAULT_MAX, RTIMUCALDEFS_DEFAULT_MAX, RTIMUCALDEFS_DEFAULT_MAX);
+
 RTIMUAccelCal *accelCal;
 
 RTIMU_DATA imuData;
@@ -64,7 +68,6 @@ char get_char()
   }
   return char(ch);
 }
-
 
 void setup()
 {
@@ -123,48 +126,6 @@ void loop()
       break;
     }
   }
-  while (true)
-  {
-    delay(1000);
-  }
-
-  /*  boolean changed;
-  RTVector3 mag;
-  
-  if (imu->IMURead()) {                                 // get the latest data
-    changed = false;
-    mag = imu->getCompass();
-    for (int i = 0; i < 3; i++) {
-      if (mag.data(i) < calData.magMin[i]) {
-        calData.magMin[i] = mag.data(i);
-        changed = true;
-      }
-      if (mag.data(i) > calData.magMax[i]) {
-        calData.magMax[i] = mag.data(i);
-        changed = true;
-      }
-    }
- 
-    if (changed) {
-      Serial.println("-------");
-      Serial.print("minX: "); Serial.print(calData.magMin[0]);
-      Serial.print(" maxX: "); Serial.print(calData.magMax[0]); Serial.println();
-      Serial.print("minY: "); Serial.print(calData.magMin[1]);
-      Serial.print(" maxY: "); Serial.print(calData.magMax[1]); Serial.println();
-      Serial.print("minZ: "); Serial.print(calData.magMin[2]);
-      Serial.print(" maxZ: "); Serial.print(calData.magMax[2]); Serial.println();
-    }
-  }
-  
-  if (Serial.available()) {
-    if (Serial.read() == 's') {                  // save the data
-      calData.magValid = true;
-      calLibWrite(0, &calData);
-      Serial.print("Mag cal data saved for device "); Serial.println(imu->IMUName());
-    }
-  }
-
-  */
 }
 
 void displayMenu()
@@ -225,17 +186,17 @@ void doMagMinMaxCal()
       switch (input)
       {
       case 's':
-        printf("\nSaving min/max data.\n\n");
+        Serial.printf("\nSaving min/max data.\n\n");
         magCal->magCalSaveMinMax();
         magMinMaxDone = true;
         return;
 
       case 'x':
-        printf("\nAborting.\n");
+        Serial.printf("\nAborting.\n");
         return;
 
       case 'r':
-        printf("\nResetting min/max data.\n");
+        Serial.printf("\nResetting min/max data.\n");
         magCal->magCalReset();
         break;
       }
@@ -245,7 +206,10 @@ void doMagMinMaxCal()
 
 void doMagEllipsoidCal() {}
 void processEllipsoid() {}
-void doAccelCal() {}
+
+void doAccelCal()
+{
+}
 
 bool pollIMU()
 {
@@ -260,13 +224,20 @@ bool pollIMU()
   }
 }
 
-void displayMagMinMax() {
+void displayMagMinMax()
+{
+  if (magCal->m_magMin < prev_magMin_ || magCal->m_magMax > prev_magMax_)
+  {
+    prev_magMin_ = magCal->m_magMin;
+    prev_magMax_ = magCal->m_magMax;
+
     Serial.printf("\n\n");
     Serial.printf("Min x: %6.2f  min y: %6.2f  min z: %6.2f\n", magCal->m_magMin.data(0),
-           magCal->m_magMin.data(1), magCal->m_magMin.data(2));
+                  magCal->m_magMin.data(1), magCal->m_magMin.data(2));
     Serial.printf("Max x: %6.2f  max y: %6.2f  max z: %6.2f\n", magCal->m_magMax.data(0),
-           magCal->m_magMax.data(1), magCal->m_magMax.data(2));
+                  magCal->m_magMax.data(1), magCal->m_magMax.data(2));
     Serial.flush();
+  }
 }
 void displayMagEllipsoid() {}
 void displayAccelMinMax() {}
