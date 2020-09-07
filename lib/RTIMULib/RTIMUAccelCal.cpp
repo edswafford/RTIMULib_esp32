@@ -37,6 +37,7 @@ void RTIMUAccelCal::accelCalInit()
         m_accelMin = RTVector3(RTIMUCALDEFS_DEFAULT_MIN, RTIMUCALDEFS_DEFAULT_MIN, RTIMUCALDEFS_DEFAULT_MIN);
         m_accelMax = RTVector3(RTIMUCALDEFS_DEFAULT_MAX, RTIMUCALDEFS_DEFAULT_MAX, RTIMUCALDEFS_DEFAULT_MAX);
     }
+    
 }
 
 void RTIMUAccelCal::accelCalReset()
@@ -60,11 +61,14 @@ void RTIMUAccelCal::newAccelCalData(const RTVector3& data)
     for (int i = 0; i < 3; i++) {
         if (m_accelCalEnable[i]) {
             m_averageValue.setData(i, (data.data(i) * ACCEL_ALPHA + m_averageValue.data(i) * (1.0 - ACCEL_ALPHA)));
-            if (m_accelMin.data(i) > m_averageValue.data(i))
+            if (m_accelMin.data(i) > m_averageValue.data(i)){
                 m_accelMin.setData(i, m_averageValue.data(i));
-            if (m_accelMax.data(i) < m_averageValue.data(i))
+            }
+            if (m_accelMax.data(i) < m_averageValue.data(i)){
                 m_accelMax.setData(i, m_averageValue.data(i));
+            }
         }
+        m_accel.setData(i, data.data(i));
     }
 }
 
@@ -87,6 +91,5 @@ bool RTIMUAccelCal::accelCalSave()
     m_settings.m_accelCalValid = true;
     m_settings.m_accelCalMin = m_accelMin;
     m_settings.m_accelCalMax = m_accelMax;
-    m_settings.saveSettings();
-    return true;
+    return m_settings.saveSettings();
 }

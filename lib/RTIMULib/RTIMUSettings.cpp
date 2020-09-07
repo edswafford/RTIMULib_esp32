@@ -353,11 +353,14 @@ bool RTIMUSettings::saveSettings()
 {
     calData_.compassCalValid = m_compassCalValid;
     calData_.compassCalEllipsoidValid = m_compassCalEllipsoidValid;
+    calData_.accelCalValid = m_accelCalValid;
+    calData_.gyroBiasValid = m_gyroBiasValid;
+
     for(auto i=0; i<3; i++){
         calData_.gyroBias[i] = m_gyroBias.data(i);
 
-        calData_.compassCalMax[i] = m_compassCalMax.data(1);
-        calData_.accelCalMin[i] = m_compassCalMin.data(i);
+        calData_.compassCalMax[i] = m_compassCalMax.data(i);
+        calData_.compassCalMin[i] = m_compassCalMin.data(i);
 
         calData_.accelCalMax[i] = m_accelCalMax.data(i);
         calData_.accelCalMin[i] = m_accelCalMin.data(i);
@@ -383,11 +386,14 @@ bool RTIMUSettings::loadSettings()
     {
         m_compassCalValid = calData_.compassCalValid;
         m_compassCalEllipsoidValid = calData_.compassCalEllipsoidValid;
+        m_accelCalValid = calData_.accelCalValid;
+        m_gyroBiasValid = m_gyroBiasValid;
+        
         for(auto i=0; i<3; i++){
             m_gyroBias.setData(i,  calData_.gyroBias[i]);
 
             m_compassCalMax.setData(i, calData_.compassCalMax[i]);
-            m_compassCalMin.setData(i, calData_.accelCalMin[i]);
+            m_compassCalMin.setData(i, calData_.compassCalMin[i]);
 
             m_accelCalMax.setData(i, calData_.accelCalMax[i]);
             m_accelCalMin.setData(i, calData_.accelCalMin[i]);

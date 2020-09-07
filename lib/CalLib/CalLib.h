@@ -43,7 +43,12 @@ typedef struct
   float compassCalEllipsoidCorr[3][3];       // 52
   float accelCalMin[3];                      // 88
   float accelCalMax[3];                      // 100
-                                             // 112
+   
+  unsigned char accelCalValid;               // 112
+  unsigned char gyroBiasValid;               // 113
+              // 114
+
+              
 } CALLIB_DATA;
 
 class CalLibEEPROM{

@@ -65,7 +65,7 @@ public:
     bool m_accelCalValid;                                   // true if the mag min/max data valid
     RTVector3 m_accelMin;                                   // the min values
     RTVector3 m_accelMax;                                   // the max values
-
+    RTVector3 m_accel; 
     RTVector3 m_averageValue;                               // averaged value actually used
 
     bool m_accelCalEnable[3]{false, false, false};                               // the enable flags

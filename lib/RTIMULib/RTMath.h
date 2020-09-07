@@ -99,6 +99,14 @@ public:
     {
         return m_data[0] >= vec.m_data[0] && m_data[1] >= vec.m_data[1] && m_data[2] >= vec.m_data[2];
     }
+    bool operator ==(const RTVector3& vec)
+    {
+        return m_data[0] == vec.m_data[0] && m_data[1] == vec.m_data[1] && m_data[2] == vec.m_data[2];
+    }
+    bool operator !=(const RTVector3& vec)
+    {
+        return m_data[0] != vec.m_data[0] || m_data[1] != vec.m_data[1] || m_data[2] != vec.m_data[2];
+    }
     RTFLOAT squareLength();
     void zero();
 

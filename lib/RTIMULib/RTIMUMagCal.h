@@ -73,7 +73,7 @@ public:
     void magCalOctantCounts(int *counts);                   // returns a count for each of the 8 octants
 
     // these vars used during the calibration process
-    RTIMUSettings m_settings;
+    RTIMUSettings& m_settings;
    RTVector3 m_magMin;                                     // the min values
     RTVector3 m_magMax;                                     // the max values
  

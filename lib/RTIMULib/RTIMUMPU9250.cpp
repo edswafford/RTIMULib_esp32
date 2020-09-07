@@ -208,8 +208,9 @@ int RTIMUMPU9250::IMUInit()
     setCompassRate(m_settings.m_MPU9250CompassSampleRate);
     setGyroLpf(m_settings.m_MPU9250GyroLpf);
     setAccelLpf(m_settings.m_MPU9250AccelLpf);
+    setAccelFsr(m_settings.m_MPU9250AccelFsr);
     setGyroFsr(m_settings.m_MPU9250GyroFsr);
-
+    
     _useSPI = !m_settings.m_busIsI2C;
     
     if (_useSPI) // using SPI for communication

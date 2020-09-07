@@ -41,7 +41,8 @@ bool pollIMU();
 void displayMagMinMax();
 void displayMagEllipsoid();
 void displayAccelMinMax();
-
+char getUserChar();
+char get_char();
 //  SERIAL_PORT_SPEED defines the speed to use for the debug serial port
 #define SERIAL_PORT_SPEED 115200
 
@@ -58,16 +59,8 @@ RTIMUAccelCal *accelCal;
 RTIMU_DATA imuData;
 bool magMinMaxDone;
 bool mustExit = false;
-char get_char()
-{
-  int ch = 0;
-  while (ch <= 0)
-  {
-    delay(250);
-    ch = Serial.read();
-  }
-  return char(ch);
-}
+bool accelEnables[3];
+int accelCurrentAxis;
 
 void setup()
 {
@@ -209,7 +202,122 @@ void processEllipsoid() {}
 
 void doAccelCal()
 {
+      uint64_t displayTimer;
+    uint64_t now;
+    char input;
+
+    Serial.printf("\n\nAccelerometer Calibration\n");
+    Serial.printf("-------------------------\n");
+    Serial.printf("The code normally ignores readings until an axis has been enabled.\n");
+    Serial.printf("The idea is to orient the IMU near the current extrema (+x, -x, +y, -y, +z, -z)\n");
+    Serial.printf("and then enable the axis, moving the IMU very gently around to find the\n");
+    Serial.printf("extreme value. Now disable the axis again so that the IMU can be inverted.\n");
+    Serial.printf("When the IMU has been inverted, enable the axis again and find the extreme\n");
+    Serial.printf("point. Disable the axis again and press the space bar to move to the next\n");
+    Serial.printf("axis and repeat. The software will display the current axis and enable state.\n");
+    Serial.printf("Available options are:\n");
+    Serial.printf("  e - enable the current axis.\n");
+    Serial.printf("  d - disable the current axis.\n");
+    Serial.printf("  space bar - move to the next axis (x then y then z then x etc.\n");
+    Serial.printf("  r - reset the current axis (if enabled).\n");
+    Serial.printf("  s - save the data once all 6 extrema have been collected.\n");
+    Serial.printf("  x - abort and discard the data.\n");
+    Serial.printf("\nPress any key to start...");
+    get_char();
+
+    //  perform all axis reset
+    for (int i = 0; i < 3; i++){
+        accelCal->accelCalEnable(i, true);
+    }
+    accelCal->accelCalReset();
+    for (int i = 0; i < 3; i++){
+        accelCal->accelCalEnable(i, false);
+    }
+    accelCurrentAxis = 0;
+
+    for (int i = 0; i < 3; i++){
+        accelEnables[i] = false;
+    }
+    displayTimer = millis();
+
+    while (1) {
+        //  poll at the rate recommended by the IMU
+
+        usleep(imu->IMUGetPollInterval() * 1000);
+
+        while (pollIMU()) {
+
+            for (int i = 0; i < 3; i++){
+                accelCal->accelCalEnable(i, accelEnables[i]);
+            }
+            accelCal->newAccelCalData(imuData.accel);
+
+            now = millis();
+
+            //  display 10 times per second
+
+            if ((now - displayTimer) > 100) {
+                displayAccelMinMax();
+                displayTimer = now;
+            }
+        }
+
+        if ((input = getUserChar()) != 0) {
+            switch (input) {
+            case 'e' :
+                accelEnables[accelCurrentAxis] = true;
+                break;
+
+            case 'd' :
+                accelEnables[accelCurrentAxis] = false;
+                break;
+
+            case 'r' :
+                accelCal->accelCalReset();
+                break;
+
+            case ' ' :
+                if (++accelCurrentAxis == 3){
+                    accelCurrentAxis = 0;
+                }
+                break;
+
+            case 's' :
+                if(accelCal->accelCalSave()) {
+                  Serial.printf("\nAccelerometer calibration data saved to file.\n");
+                }
+                else {
+                  Serial.printf("\nFAILURE: Accelerometer calibration data NOT saved to EEPROM.\n");
+                }
+                return;
+
+            case 'x' :
+                Serial.printf("\nAborting.\n");
+                return;
+            }
+        }
+    }
 }
+char getUserChar()
+{
+    char ch = Serial.read();;
+    if(ch > 0) {
+      return tolower(ch);
+    }
+    return 0;
+}
+
+char get_char()
+{
+  int ch = 0;
+  while (ch <= 0)
+  {
+    delay(250);
+    ch = Serial.read();
+  }
+  return char(ch);
+}
+
 
 bool pollIMU()
 {
@@ -226,7 +334,7 @@ bool pollIMU()
 
 void displayMagMinMax()
 {
-  if (magCal->m_magMin < prev_magMin_ || magCal->m_magMax > prev_magMax_)
+  if (magCal->m_magMin != prev_magMin_ || magCal->m_magMax != prev_magMax_)
   {
     prev_magMin_ = magCal->m_magMin;
     prev_magMax_ = magCal->m_magMax;
@@ -240,4 +348,33 @@ void displayMagMinMax()
   }
 }
 void displayMagEllipsoid() {}
-void displayAccelMinMax() {}
+
+void displayAccelMinMax() {
+    Serial.printf("\n\n");
+
+    Serial.printf("Current axis: ");
+    if (accelCurrentAxis == 0) {
+        Serial.printf("x - %s", accelEnables[0] ? "enabled" : "disabled");
+        Serial.printf("\nMin x: %6.2f Max x: %6.2f\n", accelCal->m_accelMin.data(0), accelCal->m_accelMax.data(0));
+        Serial.printf("AVG x: %6.2f\n", accelCal->m_accel.data(0));
+
+    } else     if (accelCurrentAxis == 1) {
+        Serial.printf("y - %s", accelEnables[1] ? "enabled" : "disabled");
+        Serial.printf("\nMin y: %6.2f Max y: %6.2f\n", accelCal->m_accelMin.data(1), accelCal->m_accelMax.data(1));
+        Serial.printf("AVG y: %6.2f\n", accelCal->m_accel.data(1));
+
+    } else     if (accelCurrentAxis == 2) {
+        Serial.printf("z - %s", accelEnables[2] ? "enabled" : "disabled");
+        Serial.printf("\nMin z: %6.2f Max z: %6.2f\n", accelCal->m_accelMin.data(2), accelCal->m_accelMax.data(2));
+        Serial.printf("AVG z: %6.2f\n", accelCal->m_accel.data(2));
+    }
+
+
+/*
+    Serial.printf("\nMin x: %6.2f  min y: %6.2f  min z: %6.2f\n", accelCal->m_accelMin.data(0),
+           accelCal->m_accelMin.data(1), accelCal->m_accelMin.data(2));
+    Serial.printf("Max x: %6.2f  max y: %6.2f  max z: %6.2f\n", accelCal->m_accelMax.data(0),
+           accelCal->m_accelMax.data(1), accelCal->m_accelMax.data(2));
+    Serial.flush();
+*/
+}

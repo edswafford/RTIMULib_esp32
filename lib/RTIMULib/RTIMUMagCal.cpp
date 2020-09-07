@@ -83,7 +83,9 @@ void RTIMUMagCal::magCalSaveMinMax()
     m_settings.m_compassCalMin = m_magMin;
     m_settings.m_compassCalMax = m_magMax;
     m_settings.m_compassCalEllipsoidValid = false;
-    m_settings.saveSettings();
+    if(!m_settings.saveSettings() ) {
+        HAL_ERROR("Failed to save Mag Calibration to EEPROM");
+    }
 
     //  need to invalidate ellipsoid data in order to use new min/max data
 
